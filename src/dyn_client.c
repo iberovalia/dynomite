@@ -94,7 +94,7 @@ static void client_unref_internal_try_put(struct conn *conn) {
   }
   ASSERT(conn->owner != NULL);
   conn_event_del_conn(conn);
-  log_warn("%s unref owner %s", print_obj(conn), print_obj(conn->owner));
+  log_debug(LOG_VVERB, "%s unref owner %s", print_obj(conn), print_obj(conn->owner));
   conn->owner = NULL;
   dictRelease(conn->outstanding_msgs_dict);
   conn->outstanding_msgs_dict = NULL;
