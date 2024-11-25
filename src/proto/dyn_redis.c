@@ -708,31 +708,6 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           r->token = p;
         }
 
-        if (r->type == MSG_REQ_REDIS_SELECT) {
-          rstatus_t status = redis_handle_select_command(r);
-          if (status != DN_OK) {
-              struct mbuf *mbuf = msg_ensure_mbuf(r, 64);
-              if (mbuf == NULL) {
-                  goto enomem;
-              }
-              int n = dn_scnprintf(mbuf->last, mbuf_remaining_space(mbuf),
-                                  "-ERR only database 0 is supported\r\n");
-              mbuf->last += n;
-              r->mlen += (uint32_t)n;
-              r->is_error = 1;
-              goto done;
-          }
-          // For db 0, return OK
-          struct mbuf *mbuf = msg_ensure_mbuf(r, 5);
-          if (mbuf == NULL) {
-              goto enomem;
-          }
-          memcpy(mbuf->last, "+OK\r\n", 5);
-          mbuf->last += 5;
-          r->mlen += 5;
-          goto done;
-        }
-
         // TODO: No multi-mbuf support for SW_REQ_TYPE (since very unlikely)
         m = r->token + r->rlen;
         if (m >= b->last) {
@@ -750,9 +725,27 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
         m = r->token;
         r->token = NULL;
 
+        // First set the type based on the command
+        if (r->rlen == 6 && str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
+          r->type = MSG_REQ_REDIS_SELECT;
+          r->is_read = 0;
+          
+          // Handle SELECT command immediately
+          struct mbuf *mbuf = msg_ensure_mbuf(r, 5);
+          if (mbuf == NULL) {
+            goto enomem;
+          }
+          memcpy(mbuf->last, "+OK\r\n", 5);
+          mbuf->last += 5;
+          r->mlen += 5;
+          goto done;
+        }
+
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
         // so don't set the type to MSG_UNKNOWN.
-        if (r->type != MSG_REQ_REDIS_SCRIPT) r->type = MSG_UNKNOWN;
+        if (r->type != MSG_REQ_REDIS_SCRIPT) {
+          r->type = MSG_UNKNOWN;
+        }
 
         switch (p - m) {
           case 3:
