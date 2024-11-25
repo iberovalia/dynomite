@@ -725,11 +725,25 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
         r->token = NULL;
 
         // Handle SELECT command
-        if ((p - m) == 6 && str6icmp(m, 'S', 'E', 'L', 'E', 'C', 'T')) {
+        if ((p - m) == 6 && str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
+          printf("SELECT command received\n");
           r->type = MSG_REQ_REDIS_SELECT;
           r->is_read = 0;
           state = SW_REQ_TYPE_LF;
-          break;
+
+          // Handle the SELECT command by invoking redis_handle_select_command
+          rstatus_t status = redis_handle_select_command(r);
+          if (status != DN_OK) {
+            printf("Error handling SELECT command\n");
+            // If handling fails, mark the message as a parse error
+            r->result = MSG_PARSE_ERROR;
+            goto error;
+          }
+
+          // Since SELECT is handled locally, skip further processing
+          printf("Skipping further processing for SELECT command\n");
+          goto done;
+          // **End of Changes**
         }
 
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
