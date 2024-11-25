@@ -37,7 +37,7 @@ RUN apt-get update && \
 	software-properties-common \
 	tcl8.5 
 
-RUN echo 'holaasaaa'
+RUN echo 'holaasaaaa'
 
 # Clone the Dynomite Git
 #RUN echo 'Cloning Dynomite Git'

@@ -745,6 +745,15 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           goto done;
         }
 
+        // Ignore OK command
+        if ((p - m) == 3 && str3icmp(m, '+', 'o', 'k')) {
+          printf("OK command received\n");
+          r->type = MSG_REQ_REDIS_OK;
+          r->is_read = 0;
+          state = SW_REQ_TYPE_LF;
+          goto done;
+        }
+
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
         // so don't set the type to MSG_UNKNOWN.
         if (r->type != MSG_REQ_REDIS_SCRIPT) {

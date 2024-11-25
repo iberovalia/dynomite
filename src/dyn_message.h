@@ -128,6 +128,7 @@
   ACTION(REQ_REDIS_LREM)                                                       \
   ACTION(REQ_REDIS_LSET)                                                       \
   ACTION(REQ_REDIS_LTRIM)                                                      \
+  ACTION(REQ_REDIS_OK)                                                         \
   ACTION(REQ_REDIS_PING)                                                       \
   ACTION(REQ_REDIS_QUIT)                                                       \
   ACTION(REQ_REDIS_RPOP)                                                       \
