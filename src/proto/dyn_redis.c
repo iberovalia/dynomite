@@ -473,6 +473,39 @@ done:
   return DN_OK;
 }
 
+static rstatus_t redis_handle_select_command(struct msg *r) {
+    // We expect exactly one argument for SELECT
+    if (r->ntokens != 2) {
+        return DN_ERROR;
+    }
+
+    struct mbuf *b = STAILQ_FIRST(&r->mhdr);
+    uint8_t *p = b->pos;
+
+    // Skip the command name and get to the db number
+    while (p < b->last && *p != '$') p++;
+    if (p >= b->last) return DN_ERROR;
+    p++;
+
+    // Skip the length
+    while (p < b->last && *p != '\r') p++;
+    if (p >= b->last) return DN_ERROR;
+    p += 2; // Skip \r\n
+
+    // Now p points to the db number
+    if (*p != '0') {
+        // If not selecting db 0, mark as error
+        r->error_code = EINVAL;
+        r->is_error = 1;
+        return DN_ERROR;
+    }
+
+    // For db 0, we'll just respond with OK
+    r->type = MSG_REQ_REDIS_SELECT;
+    r->is_read = 0;
+    return DN_OK;
+}
+
 /*
  * Reference: http://redis.io/topics/protocol
  *
@@ -3893,37 +3926,4 @@ struct msg *redis_reconcile_responses(struct response_mgr *rspmgr) {
     rspmgr->error_responses++;
     return rsp;
   }
-}
-
-static rstatus_t redis_handle_select_command(struct msg *r) {
-    // We expect exactly one argument for SELECT
-    if (r->ntokens != 2) {
-        return DN_ERROR;
-    }
-
-    struct mbuf *b = STAILQ_FIRST(&r->mhdr);
-    uint8_t *p = b->pos;
-
-    // Skip the command name and get to the db number
-    while (p < b->last && *p != '$') p++;
-    if (p >= b->last) return DN_ERROR;
-    p++;
-
-    // Skip the length
-    while (p < b->last && *p != '\r') p++;
-    if (p >= b->last) return DN_ERROR;
-    p += 2; // Skip \r\n
-
-    // Now p points to the db number
-    if (*p != '0') {
-        // If not selecting db 0, mark as error
-        r->error_code = EINVAL;
-        r->is_error = 1;
-        return DN_ERROR;
-    }
-
-    // For db 0, we'll just respond with OK
-    r->type = MSG_REQ_REDIS_SELECT;
-    r->is_read = 0;
-    return DN_OK;
 }
