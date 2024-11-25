@@ -493,16 +493,19 @@ static rstatus_t redis_handle_select_command(struct msg *r) {
     p += 2; // Skip \r\n
 
     // Now p points to the db number
-    if (*p != '0') {
-        // If not selecting db 0, mark as error
-        r->error_code = EINVAL;
-        r->is_error = 1;
-        return DN_ERROR;
-    }
-
-    // For db 0, we'll just respond with OK
+    // For any db number, just return OK
     r->type = MSG_REQ_REDIS_SELECT;
     r->is_read = 0;
+
+    // Create OK response
+    struct mbuf *mbuf = msg_ensure_mbuf(r, 5);
+    if (mbuf == NULL) {
+        return DN_ENOMEM;
+    }
+    memcpy(mbuf->last, "+OK\r\n", 5);
+    mbuf->last += 5;
+    r->mlen += 5;
+
     return DN_OK;
 }
 
