@@ -37,11 +37,11 @@ RUN apt-get update && \
 	software-properties-common \
 	tcl8.5 
 
-RUN echo 'hola'
+RUN echo 'holaasaaa'
 
 # Clone the Dynomite Git
+#RUN echo 'Cloning Dynomite Git'
 RUN git clone https://github.com/iberovalia/dynomite
-RUN echo 'Git repo has been cloned in your Docker VM'
 
 # Move to working directory
 WORKDIR dynomite/
@@ -56,23 +56,15 @@ RUN autoreconf -fvi \
 # Copy startup script
 RUN echo 'copy file'
 COPY scripts/startup.sh startup.sh
-RUN echo 'done copying file'
 ##################### INSTALLATION ENDS #####################
 
 # Expose the peer port
-RUN echo 'Exposing peer port 8101'
 EXPOSE 8101
 
-# Expose the underlying Redis port
-RUN echo 'Exposing Redis port 22122'
-EXPOSE 22122
-
 # Expose the stats/admin port
-RUN echo 'Exposing stats/admin port 22222'
 EXPOSE 22222
 
 # Default port to acccess Dynomite
-RUN echo 'Exposing client port for Dynomite 8102'
 EXPOSE 6379
 
 # Get some environment variables

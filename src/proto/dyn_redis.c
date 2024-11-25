@@ -743,7 +743,6 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           // Since SELECT is handled locally, skip further processing
           printf("Skipping further processing for SELECT command\n");
           goto done;
-          // **End of Changes**
         }
 
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
