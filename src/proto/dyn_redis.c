@@ -706,7 +706,7 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
         }
 
         if (r->type == MSG_REQ_REDIS_SELECT) {
-          status = redis_handle_select_command(r);
+          rstatus_t status = redis_handle_select_command(r);
           if (status != DN_OK) {
               struct mbuf *mbuf = msg_ensure_mbuf(r, 64);
               if (mbuf == NULL) {

@@ -37,6 +37,8 @@ RUN apt-get update && \
 	software-properties-common \
 	tcl8.5 
 
+RUN echo 'hola'
+
 # Clone the Dynomite Git
 RUN git clone https://github.com/iberovalia/dynomite
 RUN echo 'Git repo has been cloned in your Docker VM'
