@@ -708,7 +708,6 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           r->token = p;
         }
 
-        // TODO: No multi-mbuf support for SW_REQ_TYPE (since very unlikely)
         m = r->token + r->rlen;
         if (m >= b->last) {
           m = b->last - 1;
@@ -725,20 +724,12 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
         m = r->token;
         r->token = NULL;
 
-        // First set the type based on the command
-        if (r->rlen == 6 && str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
+        // Handle SELECT command
+        if ((p - m) == 6 && str6icmp(m, 'S', 'E', 'L', 'E', 'C', 'T')) {
           r->type = MSG_REQ_REDIS_SELECT;
           r->is_read = 0;
-          
-          // Handle SELECT command immediately
-          struct mbuf *mbuf = msg_ensure_mbuf(r, 5);
-          if (mbuf == NULL) {
-            goto enomem;
-          }
-          memcpy(mbuf->last, "+OK\r\n", 5);
-          mbuf->last += 5;
-          r->mlen += 5;
-          goto done;
+          state = SW_REQ_TYPE_LF;
+          break;
         }
 
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
