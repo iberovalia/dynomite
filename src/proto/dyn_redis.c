@@ -110,6 +110,7 @@ static bool redis_arg1(struct msg *r) {
     case MSG_REQ_REDIS_EXPIREAT:
     case MSG_REQ_REDIS_PEXPIRE:
     case MSG_REQ_REDIS_PEXPIREAT:
+    case MSG_REQ_REDIS_SELECT:
 
     case MSG_REQ_REDIS_APPEND:
     case MSG_REQ_REDIS_DECRBY:
@@ -671,6 +672,31 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           r->token = p;
         }
 
+        if (r->type == MSG_REQ_REDIS_SELECT) {
+          status = redis_handle_select_command(r);
+          if (status != DN_OK) {
+              struct mbuf *mbuf = msg_ensure_mbuf(r, 64);
+              if (mbuf == NULL) {
+                  goto enomem;
+              }
+              int n = dn_scnprintf(mbuf->last, mbuf_remaining_space(mbuf),
+                                  "-ERR only database 0 is supported\r\n");
+              mbuf->last += n;
+              r->mlen += (uint32_t)n;
+              r->is_error = 1;
+              goto done;
+          }
+          // For db 0, return OK
+          struct mbuf *mbuf = msg_ensure_mbuf(r, 5);
+          if (mbuf == NULL) {
+              goto enomem;
+          }
+          memcpy(mbuf->last, "+OK\r\n", 5);
+          mbuf->last += 5;
+          r->mlen += 5;
+          goto done;
+        }
+
         // TODO: No multi-mbuf support for SW_REQ_TYPE (since very unlikely)
         m = r->token + r->rlen;
         if (m >= b->last) {
@@ -1198,6 +1224,11 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
               r->type = MSG_REQ_REDIS_SCRIPT;
               r->is_read = 0;
               break;
+            }
+            if (str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
+                r->type = MSG_REQ_REDIS_SELECT;
+                r->is_read = 0;
+                break;
             }
             break;
 
@@ -3862,4 +3893,37 @@ struct msg *redis_reconcile_responses(struct response_mgr *rspmgr) {
     rspmgr->error_responses++;
     return rsp;
   }
+}
+
+static rstatus_t redis_handle_select_command(struct msg *r) {
+    // We expect exactly one argument for SELECT
+    if (r->ntokens != 2) {
+        return DN_ERROR;
+    }
+
+    struct mbuf *b = STAILQ_FIRST(&r->mhdr);
+    uint8_t *p = b->pos;
+
+    // Skip the command name and get to the db number
+    while (p < b->last && *p != '$') p++;
+    if (p >= b->last) return DN_ERROR;
+    p++;
+
+    // Skip the length
+    while (p < b->last && *p != '\r') p++;
+    if (p >= b->last) return DN_ERROR;
+    p += 2; // Skip \r\n
+
+    // Now p points to the db number
+    if (*p != '0') {
+        // If not selecting db 0, mark as error
+        r->error_code = EINVAL;
+        r->is_error = 1;
+        return DN_ERROR;
+    }
+
+    // For db 0, we'll just respond with OK
+    r->type = MSG_REQ_REDIS_SELECT;
+    r->is_read = 0;
+    return DN_OK;
 }

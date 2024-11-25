@@ -19,7 +19,7 @@
 ##########################################################################
 
 # Set the base image to Ubuntu
-FROM ubuntu
+FROM ubuntu:18.04
 
 # File Author / Maintainer
 MAINTAINER Ioannis Papapanagiotou - dynomite@netflix.com
@@ -35,16 +35,11 @@ RUN apt-get update && \
 	libssl-dev \
 	libtool \
 	software-properties-common \
-	redis-server \
 	tcl8.5 
 
 # Clone the Dynomite Git
-RUN git clone https://github.com/Netflix/dynomite.git
+RUN git clone https://github.com/iberovalia/dynomite.git
 RUN echo 'Git repo has been cloned in your Docker VM'
-
-RUN echo 'copy file'
-COPY scripts/startup.sh dynomite/startup.sh
-RUN echo 'done copying file'
 
 # Move to working directory
 WORKDIR dynomite/
@@ -56,6 +51,10 @@ RUN autoreconf -fvi \
 	&& make \
 	&& make install
 
+# Copy startup script
+RUN echo 'copy file'
+COPY scripts/startup.sh startup.sh
+RUN echo 'done copying file'
 ##################### INSTALLATION ENDS #####################
 
 # Expose the peer port
@@ -72,8 +71,15 @@ EXPOSE 22222
 
 # Default port to acccess Dynomite
 RUN echo 'Exposing client port for Dynomite 8102'
-EXPOSE 8102
+EXPOSE 6379
 
+# Get some environment variables
+ENV REDIS_SERVER=redis:6379
+ENV DATACENTER=dc1
+ENV RACK=rack1
+ENV LISTEN_ADDRESS=0.0.0.0:6379
+ENV PEER_ADDRESS=0.0.0.0:8101
+ENV DYNOMITE_SEED=
 
 # Setting overcommit for Redis to be able to do BGSAVE/BGREWRITEAOF
 RUN sysctl vm.overcommit_memory=1
