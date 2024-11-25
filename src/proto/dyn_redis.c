@@ -724,6 +724,7 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
         m = r->token;
         r->token = NULL;
 
+        /*
         // Handle SELECT command
         if ((p - m) == 6 && str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
           printf("SELECT command received\n");
@@ -744,15 +745,7 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
           printf("Skipping further processing for SELECT command\n");
           goto done;
         }
-
-        // Ignore OK command
-        if ((p - m) == 3 && str3icmp(m, '+', 'o', 'k')) {
-          printf("OK command received\n");
-          r->type = MSG_REQ_REDIS_OK;
-          r->is_read = 0;
-          state = SW_REQ_TYPE_LF;
-          goto done;
-        }
+        */
 
         // 'SCRIPT' commands are parsed in 2 steps due to the whitespace in between cmds,
         // so don't set the type to MSG_UNKNOWN.
@@ -1110,6 +1103,11 @@ void redis_parse_req(struct msg *r, struct context *ctx) {
             break;
 
           case 6:
+            if (str6icmp(m, 's', 'e', 'l', 'e', 'c', 't')) {
+              r->type = MSG_REQ_REDIS_SELECT;
+              r->is_read = 0;
+              break;
+            }
             if (str6icmp(m, 'a', 'p', 'p', 'e', 'n', 'd')) {
               r->type = MSG_REQ_REDIS_APPEND;
               r->is_read = 0;
